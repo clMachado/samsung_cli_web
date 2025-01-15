@@ -14,9 +14,7 @@
       <!-- Exibição do resultado -->
       <div v-if="result">
         <h3><p>Resultado: {{ result }}</p></h3>
-      </div>
-
-      
+      </div>      
     </div>
 
     <div v-if="logon">
@@ -26,10 +24,11 @@
 
         <div v-else>
           <ul>
-            <li v-for="device in devices" :key="device.deviceId">
+            <li v-for="device in filteredDevices" :key="device.deviceId">
               <h2>{{ device.label || device.name }}</h2>
               <p>ID: {{ device.deviceId }}</p>
-              <p>Capacidades: {{ device.capabilities.join(", ") }}</p>
+              
+              <!--p>Capacidades: {{ device.capabilities.join(", ") }}</p-->
 
               <!-- Botões para comandos -->
               <button @click="sendCommand(device.deviceId, 'on', 'switch')">Ligar</button>
@@ -38,13 +37,11 @@
               Ajustar para 22°C
               </button-->
 
-
               <button @click="sendModoEco(device.deviceId)">
               Modo Eco
               </button>
 
-
-              <button @click="getDeviceConfig(device.deviceId, 'thermostatCoolingSetpoint')">Consulta CFGs</button>
+              <button @click="getDeviceConfig(device.deviceId, '')">Consulta CFGs</button>
 
             </li>
           </ul>
@@ -75,8 +72,9 @@
 <script>
 import axios from "axios";
 
-export default {
-  data() {
+
+export default {  
+  data() {    
     return {
       devices: [],
       loading: true,
@@ -85,7 +83,13 @@ export default {
       result:'',
       commandResponse: null, // Para armazenar a resposta da API
       deviceConfig: {}, // configuracoes do dispositivo
+      baseUrl : "https://samsung-integracao-995c5632d56a.herokuapp.com", // API que comunicara com o SmartThings 
     };
+  },
+  computed: {
+    filteredDevices() { 
+      return this.devices.filter(item => item.label === "Ar suite");
+    },
   },
   
   
@@ -100,9 +104,10 @@ export default {
       response = "Falha";
       try {
         this.result = '';
+        this.loading = true;
         this.logon=false;
 
-        response = await axios.get("http://localhost:3001/devices",{ headers: {pwd:this.pwd.trim()}, });
+        response = await axios.get(`${this.baseUrl}/devices`,{ headers: {pwd:this.pwd.trim()}, });
         // Extrair informações dos dispositivos
         this.devices = response.data.items.map((device) => ({
           deviceId: device.deviceId,
@@ -123,7 +128,8 @@ export default {
     async sendCommand(deviceId, command, capability, args = []) {
       try {
         this.commandResponse = ''
-        const response = await axios.post(`http://localhost:3001/device/${deviceId}/command`, {          
+        this.loading = true;
+        const response = await axios.post(`${this.baseUrl}/device/${deviceId}/command`, {          
           command,
           capability,
           arguments: args,
@@ -143,14 +149,20 @@ export default {
         console.error(`Erro ao enviar comando ${command}:`, error.response?.data || error.message);
         this.commandResponse = `Erro: ${error.response?.data?.error || error.message}`;
       }
+      this.loading = false;
     },
 
     // CARREGA INDORMACOES DO DISPOSITIVO
     async getDeviceConfig(deviceId, command) {
-      console.log(deviceId);
-      console.log(command);
+      //console.log(deviceId);
+      //console.log(command);
+      this.loading = true;
 
-      const url = `http://localhost:3001/device/${deviceId}/get/${command}`;
+      if (command.trim() == '')
+        command = "all";
+
+      const url = `${this.baseUrl}/device/${deviceId}/get/${command}`;
+      //const url = `http://localhost:3001/device/${deviceId}/get/${command}`;
       console.log(url)
 
       try {
@@ -161,28 +173,50 @@ export default {
       } catch (error) {
         console.error("Erro ao recuperar configurações do dispositivo:", error);
       }
+      this.loading = false;
     },
 
     async sendModoEco(deviceId) {
-
+      this.loading = true;
       this.sendCommand(deviceId, 'on', 'switch');
 
+      await this.sleep(1000);
+      this.result = "ajustando modo Arrefecer";
       this.sendCommand(deviceId, 'setAirConditionerMode', 'airConditionerMode',['cool']);
       
-      this.sendCommand(deviceId, 'setAcOptionalMode', 'custom.airConditionerOptionalMode',['smart']);
+      await this.sleep(1000);
+      this.result = "ajustando modo Eco";
+      this.sendCommand(deviceId, 'setAcOptionalMode', 'custom.airConditionerOptionalMode',['smart']);     
+      
+      // aguardo ar se ajustar ao modo definido
+      await this.sleep(15000);
+      this.result = "Set temperatura";
+      this.sendCommand(deviceId, 'setCoolingSetpoint', 'thermostatCoolingSetpoint', [24]);
+      await this.sleep(1000);
 
-      this.sendCommand(deviceId, 'setFanOscillationMode', 'fanOscillationMode',['vertical']);
-      await this.sleep(5000); 
-      console.log("aguardando vertical")
 
+      // AJUSTE DE FANS
+      // sleeps ate chegar a posicao de minha preferencia
+      // *****************************************************
+      this.result = "aguardando pas de ocilação";
+      this.sendCommand(deviceId, 'setFanOscillationMode', 'fanOscillationMode',['all']);
+      await this.sleep(10000); 
+      
+      this.result = "aguardando pas horizontais";
       this.sendCommand(deviceId, 'setFanOscillationMode', 'fanOscillationMode',['horizontal']);
-      console.log("aguardando horizontal")
       await this.sleep(5000); 
 
+      this.result = "parando Ocilacao";
       this.sendCommand(deviceId, 'setFanOscillationMode', 'fanOscillationMode',['fixed']);
-      console.log("stop")
+      
+      await this.sleep(1000);
+      this.result = "setando Fans no minimo";
+      this.sendCommand(deviceId, 'setFanMode', 'airConditionerFanMode', ['low']);
+      // *****************************************************
 
-      this.sendCommand(deviceId, 'setFanMode', 'airConditionerFanMode', ['low'])
+      await this.sleep(2000);
+      this.result = '';
+      this.loading = false;
 
     },
 
