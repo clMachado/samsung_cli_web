@@ -86,12 +86,12 @@ export default {
       baseUrl : "https://samsung-integracao-995c5632d56a.herokuapp.com", // API que comunicara com o SmartThings 
     };
   },
+
   computed: {
     filteredDevices() { 
       return this.devices.filter(item => item.label === "Ar suite");
     },
   },
-  
   
   methods: {
     sleep(ms) {
@@ -219,7 +219,6 @@ export default {
       this.loading = false;
 
     },
-
 
   },
   mounted() {
