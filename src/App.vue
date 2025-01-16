@@ -199,12 +199,12 @@ export default {
       // sleeps ate chegar a posicao de minha preferencia
       // *****************************************************
       this.result = "aguardando pas de ocilação";
-      this.sendCommand(deviceId, 'setFanOscillationMode', 'fanOscillationMode',['all']);
-      await this.sleep(10000); 
+      this.sendCommand(deviceId, 'setFanOscillationMode', 'fanOscillationMode',['vertical']);
+      await this.sleep(4600); 
       
       this.result = "aguardando pas horizontais";
       this.sendCommand(deviceId, 'setFanOscillationMode', 'fanOscillationMode',['horizontal']);
-      await this.sleep(5000); 
+      await this.sleep(7500); 
 
       this.result = "parando Ocilacao";
       this.sendCommand(deviceId, 'setFanOscillationMode', 'fanOscillationMode',['fixed']);
