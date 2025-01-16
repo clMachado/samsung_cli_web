@@ -180,6 +180,8 @@ export default {
       this.loading = true;
       this.sendCommand(deviceId, 'on', 'switch');
 
+      this.sendCommand(deviceId, 'setLighting', 'samsungce.airConditionerLighting',['off']);
+
       await this.sleep(1000);
       this.result = "ajustando modo Arrefecer";
       this.sendCommand(deviceId, 'setAirConditionerMode', 'airConditionerMode',['cool']);
