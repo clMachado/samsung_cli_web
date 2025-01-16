@@ -2,6 +2,6 @@ const { defineConfig } = require('@vue/cli-service')
 module.exports = defineConfig({
   
   publicPath: process.env.NODE_ENV === 'production'
-    ? '/samsung_cli_web/'
+    ? '/samsung-cli/'
     : '/'
 })
